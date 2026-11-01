@@ -1,6 +1,6 @@
 # 流光叠影 · LightsAndShadows for tPlainModLoader
 
-作者：丷米苏丷
+基于 [tPlainModLoader](https://github.com/github-user-64/tPlainModLoader) 的 Terraria 1.4.5.8 光影增强模组。
 
 参考 Workshop「Lights And Shadows」（作者 yiyang233，Workshop id `2670628346`）的渲染思路，在 **Terraria 1.4.5.8 + tPlainModLoader** 上实现的光影增强模组。
 
@@ -65,6 +65,11 @@ fxc /T fx_2_0 /Fo shaders\Light.fxo shaders\Light.fx
 ```
 
 `CustomLights` 的 `Item` 支持英文物品名或数字 ID，`Color` 支持 `"R,G,B"` 或 `"#RRGGBB"`。
+
+## 相关项目
+
+- [tPlainModLoader](https://github.com/github-user-64/tPlainModLoader)
+- [光之女皇 视觉重铸](https://github.com/misuOVO/EmpressVisualReforge)
 
 ## 致谢 / 版权
 
