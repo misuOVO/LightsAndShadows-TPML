@@ -1,0 +1,101 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <OutputType>Library</OutputType>
+    <PlatformTarget>x86</PlatformTarget>
+    <LangVersion>7.3</LangVersion>
+    <AssemblyName>LightsAndShadows</AssemblyName>
+    <RootNamespace>LightsAndShadows</RootNamespace>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
+    <DebugType>none</DebugType>
+
+    <!-- 修改成你的 Terraria 安装目录, 或构建时传 -p:TerrariaDir="..." -->
+    <TerrariaDir Condition="'$(TerrariaDir)' == ''">D:\steam\steamapps\common\Terraria</TerrariaDir>
+    <ModsDir Condition="'$(ModsDir)' == ''">$(TerrariaDir)\Mods</ModsDir>
+    <OutputPath>$(ModsDir)\LightsAndShadows\</OutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- tools/ 是独立的开发期工具, 不参与 mod 编译 -->
+  <ItemGroup>
+    <Compile Remove="tools/**" />
+    <None Include="tools/**" />
+  </ItemGroup>
+
+  <!-- 原版 Lights And Shadows 的 shader (fxc /T fx_2_0) 与颜色渐变贴图 -->
+  <ItemGroup>
+    <EmbeddedResource Include="shaders\Light.fxo">
+      <LogicalName>LightsAndShadows.Light.fxo</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="shaders\Shadow.fxo">
+      <LogicalName>LightsAndShadows.Shadow.fxo</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="shaders\Bloom1.fxo">
+      <LogicalName>LightsAndShadows.Bloom1.fxo</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="shaders\DualBlur.fxo">
+      <LogicalName>LightsAndShadows.DualBlur.fxo</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="shaders\Darken.fxo">
+      <LogicalName>LightsAndShadows.Darken.fxo</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="shaders\Mask.fxo">
+      <LogicalName>LightsAndShadows.Mask.fxo</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="shaders\ColorTex.rawimg">
+      <LogicalName>LightsAndShadows.ColorTex.rawimg</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="shaders\ColorTex_Alt.rawimg">
+      <LogicalName>LightsAndShadows.ColorTex_Alt.rawimg</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="shaders\ColorTex2.rawimg">
+      <LogicalName>LightsAndShadows.ColorTex2.rawimg</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <!-- 全部运行时由游戏/加载器提供, 不拷贝 -->
+  <ItemGroup>
+    <Reference Include="Terraria">
+      <HintPath>$(TerrariaDir)\Terraria.exe</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="tContentPatch">
+      <HintPath>$(TerrariaDir)\tContentPatch.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(TerrariaDir)\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>$(TerrariaDir)\Newtonsoft.Json.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="ReLogic">
+      <HintPath>$(TerrariaDir)\ReLogic.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Microsoft.Xna.Framework">
+      <HintPath>$(WINDIR)\Microsoft.NET\assembly\GAC_32\Microsoft.Xna.Framework\v4.0_4.0.0.0__842cf8be1de50553\Microsoft.Xna.Framework.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Microsoft.Xna.Framework.Game">
+      <HintPath>$(WINDIR)\Microsoft.NET\assembly\GAC_32\Microsoft.Xna.Framework.Game\v4.0_4.0.0.0__842cf8be1de50553\Microsoft.Xna.Framework.Game.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Microsoft.Xna.Framework.Graphics">
+      <HintPath>$(WINDIR)\Microsoft.NET\assembly\GAC_32\Microsoft.Xna.Framework.Graphics\v4.0_4.0.0.0__842cf8be1de50553\Microsoft.Xna.Framework.Graphics.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- mod 元数据输出到模组文件夹根目录 (加载器从根目录读取) -->
+  <Target Name="CopyModMeta" AfterTargets="Build">
+    <Copy SourceFiles="Resource/info.json;Resource/loadConfig.json;Resource/ico.png" DestinationFolder="$(TargetDir)" />
+  </Target>
+</Project>

@@ -1,0 +1,14 @@
+bin/
+obj/
+.vs/
+tools/
+*.user
+*.suo
+*.pdb
+*.log
+setting.json
+setting.json.bak
+draw-log.txt
+patch-errors.txt
+dll/
+
