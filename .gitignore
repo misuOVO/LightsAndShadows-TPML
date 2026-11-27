@@ -12,3 +12,5 @@ draw-log.txt
 patch-errors.txt
 dll/
 
+
+dist/

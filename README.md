@@ -1,8 +1,8 @@
 # 流光叠影 · LightsAndShadows for tPlainModLoader
 
-基于 [tPlainModLoader](https://github.com/github-user-64/tPlainModLoader) 的 Terraria 1.4.5.8 光影增强模组。
+基于 [tPlainModLoader](https://github.com/github-user-64/tPlainModLoader) 的 Terraria 1.4.6.1 光影增强模组。
 
-参考 Workshop「Lights And Shadows」（作者 yiyang233，Workshop id `2670628346`）的渲染思路，在 **Terraria 1.4.5.8 + tPlainModLoader** 上实现的光影增强模组。
+参考 Workshop「Lights And Shadows」（作者 yiyang233，Workshop id `2670628346`）的渲染思路，在 **Terraria 1.4.6.1 + tPlainModLoader** 上实现的光影增强模组。
 
 ## 功能
 
@@ -22,7 +22,7 @@
 
 - .NET SDK（项目目标 `net472`，会通过 NuGet 拉取 reference assemblies）
 - XNA Framework 4.0（Terraria 运行环境自带）
-- Terraria 1.4.5.8 + tPlainModLoader（游戏根目录需有 `Terraria.exe`、`tContentPatch.dll`、`0Harmony.dll`、`Newtonsoft.Json.dll`、`ReLogic.dll`）
+- Terraria 1.4.6.1 + tPlainModLoader（游戏根目录需有 `Terraria.exe`、`tContentPatch.dll`、`0Harmony.dll`、`Newtonsoft.Json.dll`、`ReLogic.dll`）
 
 ```powershell
 dotnet build -c Release -p:TerrariaDir="D:\steam\steamapps\common\Terraria"
