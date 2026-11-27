@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 using tContentPatch;
 using tContentPatch.Content.UI;
-using tContentPatch.Content.UI.ModSet;
+using tContentPatch.Content.UI.Item1;
 using Terraria;
 using Terraria.UI;
 
@@ -149,7 +149,7 @@ namespace LightsAndShadows
         {
             instance = this;
 
-            var sv = new UIScrollViewer2();
+            var sv = new UIScrollViewer2(false);
             sv.Width.Set(0, 1f);
             sv.Height.Set(0, 1f);
 
@@ -173,46 +173,54 @@ namespace LightsAndShadows
         private static UIElement CreateSwitch(string text, Func<Data, bool> get, Action<Data, bool> set)
         {
             var s = new UIItemSwitch(null, text);
-            s.OnUpdate += _ =>
-            {
-                if (data == null) return;
-                s.SetVal(get(data));
-                if (s.IsMouseHovering) Main.instance.MouseText(text);
-            };
-            s.OnValUpdate += v =>
+            s.OnGetIsChecked = () => data != null && get(data);
+            s.OnSetIsChecked = v =>
             {
                 if (data == null || get(data) == v) return;
                 set(data, v);
                 if (instance != null) instance.NeedSave = true;
+            };
+            s.OnUpdate += _ =>
+            {
+                if (s.IsMouseHovering) Main.instance.MouseText(text);
             };
             return s;
         }
 
         private static UIElement CreateSlider(SwitchDef def)
         {
-            UIItemValueSlider s = def.IsInt
-                ? new UIItemValueSlider((int)def.ParamMin, (int)def.ParamMax, null, def.ParamText)
-                : new UIItemValueSlider(def.ParamMin, def.ParamMax, null, def.ParamText);
-            if (def.Format != null) s.FloatToString = def.Format;
-            s.SetVal(def.GetP(data));
-
-            float shown = def.GetP(data);
-            s.OnValUpdate += v =>
+            if (def.IsInt)
             {
-                shown = v;
+                var s = new UIItemValueSliderInt((int)def.ParamMin, (int)def.ParamMax, null, def.ParamText);
+                if (def.Format != null) s.ValueToString = v => def.Format(v);
+                s.OnGetValue = () => (int)Math.Round(def.GetP(data));
+                s.OnSetValue = v =>
+                {
+                    if (data == null) return;
+                    def.SetP(data, v);
+                    if (instance != null) instance.NeedSave = true;
+                };
+                s.OnUpdate += _ =>
+                {
+                    if (s.IsMouseHovering) Main.instance.MouseText(def.ParamText);
+                };
+                return s;
+            }
+
+            var f = new UIItemValueSliderFloat(def.ParamMin, def.ParamMax, null, def.ParamText);
+            if (def.Format != null) f.ValueToString = v => def.Format(v);
+            f.OnGetValue = () => def.GetP(data);
+            f.OnSetValue = v =>
+            {
                 if (data == null) return;
-                if (Math.Abs(def.GetP(data) - v) < 0.0001f) return;
                 def.SetP(data, v);
                 if (instance != null) instance.NeedSave = true;
             };
-            s.OnUpdate += _ =>
+            f.OnUpdate += _ =>
             {
-                if (data == null) return;
-                float cur = def.GetP(data);
-                if (Math.Abs(cur - shown) > 0.0001f) s.SetVal(cur);
-                if (s.IsMouseHovering) Main.instance.MouseText(def.ParamText);
+                if (f.IsMouseHovering) Main.instance.MouseText(def.ParamText);
             };
-            return s;
+            return f;
         }
     }
 }
