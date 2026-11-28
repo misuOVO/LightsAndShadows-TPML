@@ -199,7 +199,7 @@ try { DisposeTex(_worldMask); } catch { }
                 // 光照不穿背景: 在世界层还完整时保存它的 alpha 遮罩, Postfix 用
                 _worldMaskValid = false;
                 Setting.Data d = Setting.data;
-                if (!d.LightThroughBackground)
+                if (!d.LightThroughBackground || !d.RenderCloudShadow)
                 {
                     int mw = worldTarget.Width, mh = worldTarget.Height;
                     if (EnsureTarget(ref _worldMask, dev, mw, mh))
@@ -272,7 +272,9 @@ try { DisposeTex(_worldMask); } catch { }
         {
             bool underground = IsUnderground();
             float fg = underground ? 0f : MathHelper.Clamp(d.ForegroundShadow, 0f, 2f) * 0.35f;
-            float bg = underground ? 0f : MathHelper.Clamp(d.BackgroundShadow, 0f, 2f) * 0.28f;
+            float bg = (underground || !d.RenderBackgroundShadow)
+                ? 0f
+                : MathHelper.Clamp(d.BackgroundShadow, 0f, 2f) * 0.28f;
             bool worldLight = false; // 关闭“只照世界层”路径: 该路径会写回游戏世界目标, 有紫屏风险
             if (fg <= 0.005f && bg <= 0.005f && !worldLight) return;
 
@@ -280,7 +282,7 @@ try { DisposeTex(_worldMask); } catch { }
             if (!EnsureTargets(dev, W, H)) return;
 
             // 太阳 + 火把的 光照/光柱 (worldLight 时顺便构建 _light)
-            RenderLightAndRays(dev, worldTarget, true, d, worldLight);
+            RenderLightAndRays(dev, worldTarget, true, d, worldLight, false);
 
             // 前景/玩家层
             if (fg > 0.005f)
@@ -344,7 +346,7 @@ try { DisposeTex(_worldMask); } catch { }
                 DrawSprite(null, scene, new Rectangle(0, 0, W, H), Color.White, SpriteEffects.None, BlendState.Opaque);
 
                 step = "light-rays";
-                RenderLightAndRays(dev, scene, false, d, true);
+                RenderLightAndRays(dev, scene, false, d, true, true);
 
                 // 光照不穿背景: 用世界层 alpha 把 _light 限制在前景/世界层
 
@@ -388,7 +390,7 @@ try { DisposeTex(_worldMask); } catch { }
             return p != null && p.Center.Y >= Main.worldSurface * 16.0 + 800.0;
         }
 
-        private static void RenderLightAndRays(GraphicsDevice dev, RenderTarget2D scene, bool flip, Setting.Data d, bool buildLight)
+        private static void RenderLightAndRays(GraphicsDevice dev, RenderTarget2D scene, bool flip, Setting.Data d, bool buildLight, bool maskSky)
         {
             int W = scene.Width, H = scene.Height;
             if (!EnsureTargets(dev, W, H)) return;
@@ -400,6 +402,14 @@ try { DisposeTex(_worldMask); } catch { }
             // 阴影图只在地表有意义: 地下蓝通道整片都低, 会把整个洞穴当成阴影
             if (!underground)
             {
+                // 关闭云朵阴影: 用世界层 alpha 把天空/云朵从阴影取样里剔除
+                Texture2D skyMask = _white;
+                if (maskSky && !d.RenderCloudShadow && _worldMaskValid &&
+                    _worldMask != null && !_worldMask.IsDisposed)
+                {
+                    skyMask = _worldMask;
+                }
+
                 dev.SetRenderTarget(_shadowMask);
                 dev.Clear(Color.Black);
                 float m = 1f - Main.bgAlphaFrontLayer[2] * 0.09f;
@@ -407,6 +417,7 @@ try { DisposeTex(_worldMask); } catch { }
                 _shadowFx.Parameters["uScreenResolution"].SetValue(new Vector2(W, H));
                 _shadowFx.Parameters["m"].SetValue(m);
                 _shadowFx.Parameters["uPos"].SetValue(ToScreenCoords(GetSunPos(scene, flip), scene));
+                _shadowFx.Parameters["tex1"].SetValue(skyMask);
                 DrawSprite(_shadowFx.CurrentTechnique.Passes[0], scene,
                     new Rectangle(0, 0, W / MaskDiv, H / MaskDiv), Color.White, SpriteEffects.None, BlendState.Additive);
             }
@@ -896,6 +907,7 @@ try { DisposeTex(_worldMask); } catch { }
         {
             Vector2 center = GetSunPos(scene, flipY) / MaskDiv;
             const int quality = 3;
+            float shadowLen = MathHelper.Clamp(d.ShadowLength, 0.2f, 2f);
 
             bool began = false;
             try
@@ -905,22 +917,33 @@ try { DisposeTex(_worldMask); } catch { }
                 began = true;
                 if (Main.dayTime)
                 {
-                    for (int i = 0; i < 30; i++)
+                    // 长度越长，层数越多，避免出现一圈一圈的重影
+                    int steps = Math.Min(50, Math.Max(30, (int)Math.Ceiling(30f * shadowLen)));
+                    float stepNorm = 30f / steps;
+                    float maxAdd = 30f / quality * (0.012f + quality * 0.01f) * shadowLen;
+
+                    for (int i = 0; i < steps; i++)
                     {
-                        float a = 0.55f * (30 - i) / 120f;
+                        float t = steps > 1 ? i / (float)(steps - 1) : 0f;
+                        float a = 0.55f * (1f - t) * 0.25f * stepNorm;
                         float alpha = 255f * a * (d.ShadowIntensity + 0.1f) * (dayLight * 0.5f - 0.1f) * 1.4f;
                         Color c = Color.White;
                         c.A = (byte)MathHelper.Clamp(alpha, 0f, 255f);
-                        float scale = 1f + i * (1f / quality) * (0.012f + quality * 0.01f);
+                        float scale = 1f + t * maxAdd;
                         Main.spriteBatch.Draw(_shadowMask, center, null, c, 0f, center, scale, SpriteEffects.None, 0f);
                     }
                 }
                 else
                 {
-                    for (int j = 0; j < 20; j++)
+                    int steps = Math.Min(50, Math.Max(20, (int)Math.Ceiling(20f * shadowLen)));
+                    float stepNorm = 20f / steps;
+                    float maxAdd = 20f * 0.01f * shadowLen;
+
+                    for (int j = 0; j < steps; j++)
                     {
-                        float a = (20f - j) / 190f;
-                        Main.spriteBatch.Draw(_shadowMask, center, null, Color.White * a, 0f, center, 1f + j * 0.01f, SpriteEffects.None, 0f);
+                        float t = steps > 1 ? j / (float)(steps - 1) : 0f;
+                        float a = (1f - t) / 9.5f * stepNorm;
+                        Main.spriteBatch.Draw(_shadowMask, center, null, Color.White * a, 0f, center, 1f + t * maxAdd, SpriteEffects.None, 0f);
                     }
                 }
             }
@@ -996,6 +1019,12 @@ try { DisposeTex(_worldMask); } catch { }
         private static void DrawSprite(EffectPass pass, Texture2D texture, Rectangle dest,
             Color color, SpriteEffects effects, BlendState blend)
         {
+            DrawSprite(pass, texture, null, dest, color, effects, blend);
+        }
+
+        private static void DrawSprite(EffectPass pass, Texture2D texture, Rectangle? source, Rectangle dest,
+            Color color, SpriteEffects effects, BlendState blend)
+        {
             bool began = false;
             try
             {
@@ -1003,7 +1032,7 @@ try { DisposeTex(_worldMask); } catch { }
                     DepthStencilState.None, RasterizerState.CullNone, null, Matrix.Identity);
                 began = true;
                 if (pass != null) pass.Apply();
-                Main.spriteBatch.Draw(texture, dest, null, color, 0f, Vector2.Zero, effects, 0f);
+                Main.spriteBatch.Draw(texture, dest, source, color, 0f, Vector2.Zero, effects, 0f);
             }
             finally
             {

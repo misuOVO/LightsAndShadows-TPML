@@ -24,6 +24,9 @@ namespace LightsAndShadows
             [JsonProperty("LightThroughBackground")] public bool LightThroughBackground = true;
             [JsonProperty("ForegroundShadow")] public float ForegroundShadow = 0f; // 玩家/前景层阴影 0..2
             [JsonProperty("BackgroundShadow")] public float BackgroundShadow = 0f; // 背景层阴影 0..2
+            [JsonProperty("RenderBackgroundShadow")] public bool RenderBackgroundShadow = true; // 是否渲染背景层阴影
+            [JsonProperty("RenderCloudShadow")] public bool RenderCloudShadow = true;           // 是否让云朵/天空参与阴影
+            [JsonProperty("ShadowLength")] public float ShadowLength = 1f;          // 阴影长度 0.2..2
             [JsonProperty("DayColor")] public string DayColor = "Alternate";           // Classic / Alternate
             [JsonProperty("UseBloom")] public bool UseBloom = true;
             [JsonProperty("BloomIntensity")] public float BloomIntensity = 1.25f;       // 0.2..1.25
@@ -104,6 +107,14 @@ namespace LightsAndShadows
                 ParamText = "背景阴影", ParamMin = 0f, ParamMax = 2f,
                 GetP = d => d.BackgroundShadow, SetP = (d, v) => d.BackgroundShadow = v,
                 Format = v => v.ToString("0.00") },
+            new SwitchDef { Group = "阴影分层", Text = "渲染背景阴影 (关闭 = 背景层完全不打阴影)",
+                Get = d => d.RenderBackgroundShadow, Set = (d, v) => d.RenderBackgroundShadow = v },
+            new SwitchDef { Group = "阴影分层", Text = "渲染云朵阴影 (关闭 = 云朵/天空不参与投影)",
+                Get = d => d.RenderCloudShadow, Set = (d, v) => d.RenderCloudShadow = v },
+            new SwitchDef { Group = "阴影分层", Text = null,
+                ParamText = "阴影长度", ParamMin = 0.2f, ParamMax = 2f,
+                GetP = d => d.ShadowLength, SetP = (d, v) => d.ShadowLength = v,
+                Format = v => v.ToString("0.00") },
             new SwitchDef { Group = "光照", Text = "光照穿过背景 (关闭 = 只照亮前景/世界层)",
                 Get = d => d.LightThroughBackground, Set = (d, v) => d.LightThroughBackground = v },
             new SwitchDef { Group = "光照", Text = "日光色: 白色 (Alternate) / 关闭 = Classic 黄色",
@@ -139,6 +150,9 @@ namespace LightsAndShadows
                 SetDefault();
                 Save();
             }
+
+            if (data.ShadowLength < 0.2f) data.ShadowLength = 0.2f;
+            if (data.ShadowLength > 2f) data.ShadowLength = 2f;
         }
 
         public override void SetDefault() => data = new Data();
