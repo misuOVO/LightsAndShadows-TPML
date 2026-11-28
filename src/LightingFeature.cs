@@ -199,7 +199,7 @@ try { DisposeTex(_worldMask); } catch { }
                 // 光照不穿背景: 在世界层还完整时保存它的 alpha 遮罩, Postfix 用
                 _worldMaskValid = false;
                 Setting.Data d = Setting.data;
-                if (!d.LightThroughBackground || !d.RenderCloudShadow)
+                if (!d.LightThroughBackground)
                 {
                     int mw = worldTarget.Width, mh = worldTarget.Height;
                     if (EnsureTarget(ref _worldMask, dev, mw, mh))
@@ -272,9 +272,7 @@ try { DisposeTex(_worldMask); } catch { }
         {
             bool underground = IsUnderground();
             float fg = underground ? 0f : MathHelper.Clamp(d.ForegroundShadow, 0f, 2f) * 0.35f;
-            float bg = (underground || !d.RenderBackgroundShadow)
-                ? 0f
-                : MathHelper.Clamp(d.BackgroundShadow, 0f, 2f) * 0.28f;
+            float bg = underground ? 0f : MathHelper.Clamp(d.BackgroundShadow, 0f, 2f) * 0.28f;
             bool worldLight = false; // 关闭“只照世界层”路径: 该路径会写回游戏世界目标, 有紫屏风险
             if (fg <= 0.005f && bg <= 0.005f && !worldLight) return;
 
@@ -282,7 +280,7 @@ try { DisposeTex(_worldMask); } catch { }
             if (!EnsureTargets(dev, W, H)) return;
 
             // 太阳 + 火把的 光照/光柱 (worldLight 时顺便构建 _light)
-            RenderLightAndRays(dev, worldTarget, true, d, worldLight, false);
+            RenderLightAndRays(dev, worldTarget, true, d, worldLight);
 
             // 前景/玩家层
             if (fg > 0.005f)
@@ -346,7 +344,7 @@ try { DisposeTex(_worldMask); } catch { }
                 DrawSprite(null, scene, new Rectangle(0, 0, W, H), Color.White, SpriteEffects.None, BlendState.Opaque);
 
                 step = "light-rays";
-                RenderLightAndRays(dev, scene, false, d, true, true);
+                RenderLightAndRays(dev, scene, false, d, true);
 
                 // 光照不穿背景: 用世界层 alpha 把 _light 限制在前景/世界层
 
@@ -390,7 +388,7 @@ try { DisposeTex(_worldMask); } catch { }
             return p != null && p.Center.Y >= Main.worldSurface * 16.0 + 800.0;
         }
 
-        private static void RenderLightAndRays(GraphicsDevice dev, RenderTarget2D scene, bool flip, Setting.Data d, bool buildLight, bool maskSky)
+        private static void RenderLightAndRays(GraphicsDevice dev, RenderTarget2D scene, bool flip, Setting.Data d, bool buildLight)
         {
             int W = scene.Width, H = scene.Height;
             if (!EnsureTargets(dev, W, H)) return;
@@ -402,14 +400,6 @@ try { DisposeTex(_worldMask); } catch { }
             // 阴影图只在地表有意义: 地下蓝通道整片都低, 会把整个洞穴当成阴影
             if (!underground)
             {
-                // 关闭云朵阴影: 用世界层 alpha 把天空/云朵从阴影取样里剔除
-                Texture2D skyMask = _white;
-                if (maskSky && !d.RenderCloudShadow && _worldMaskValid &&
-                    _worldMask != null && !_worldMask.IsDisposed)
-                {
-                    skyMask = _worldMask;
-                }
-
                 dev.SetRenderTarget(_shadowMask);
                 dev.Clear(Color.Black);
                 float m = 1f - Main.bgAlphaFrontLayer[2] * 0.09f;
@@ -417,7 +407,6 @@ try { DisposeTex(_worldMask); } catch { }
                 _shadowFx.Parameters["uScreenResolution"].SetValue(new Vector2(W, H));
                 _shadowFx.Parameters["m"].SetValue(m);
                 _shadowFx.Parameters["uPos"].SetValue(ToScreenCoords(GetSunPos(scene, flip), scene));
-                _shadowFx.Parameters["tex1"].SetValue(skyMask);
                 DrawSprite(_shadowFx.CurrentTechnique.Passes[0], scene,
                     new Rectangle(0, 0, W / MaskDiv, H / MaskDiv), Color.White, SpriteEffects.None, BlendState.Additive);
             }
